@@ -1,86 +1,76 @@
 #include <Elementary.h>
+#include "efl_color_converter.h"
 
-enum BUTTON{
-   BUTTON_BLUR             = 0,
-   BUTTON_INC_SATURATION   = 1,
-   BUTTON_DEC_SATURATION   = 2,
-   BUTTON_ALL              = BUTTON_DEC_SATURATION+1,
+enum BUTTON
+{
+   BUTTON_INC_SATURATION = 0,
+   BUTTON_DEC_SATURATION = 1,
+   BUTTON_ALL = BUTTON_DEC_SATURATION + 1,
 };
 
-char* BUTTON_STR[BUTTON_ALL] ={
-   "BLURE",
-   "INC SATURATION",
-   "DEC SATURATION",
+char *BUTTON_STR[BUTTON_ALL] = {
+    "INC SATURATION",
+    "DEC SATURATION",
 };
-
-enum COLORSPACE{
-   COLORSPACE_RGBA            = 0,
-   COLORSPACE_HSV             = 1,
-};
-
-
 
 typedef struct _APP
 {
    Evas_Object *win, *box, *img, *boxHor, *boxHor2;
    Eo *btn[BUTTON_ALL];
-   char * str;
+   char *str;
+   HSV24 *hsv_data;
+   HSV24 *hsv_data_tmp;
+   size_t hsv_data_len;
+   RGBA32 *img_src;
+   size_t img_src_len;
+   int img_w, img_h;
 } APP;
 APP *app;
 
-void
-image_blur(Evas_Object *img)
+void saturation_add(Evas_Object *img, int value)
 {
-    unsigned char *img_src = evas_object_image_data_get(img, EINA_TRUE);
+   if (!app->img_src)
+   {
+      app->img_src = evas_object_image_data_get(img, EINA_TRUE);
+      evas_object_image_size_get(img, &app->img_w, &app->img_h);
+      app->img_src_len = app->img_w * app->img_h * 4;
+   }
+   if (!app->hsv_data)
+   {
+      app->hsv_data_len = app->img_w * app->img_h * 3;
+      app->hsv_data = malloc(app->hsv_data_len);
+      app->hsv_data_tmp = malloc(app->hsv_data_len);
+      efl_color_buffer_convert(app->img_src, app->hsv_data, app->img_src_len, app->hsv_data_len, EFL_COLORSPACE_RGBA32, EFL_COLORSPACE_HSV24);
+   }
 
-    int w;
-    int h;
-    evas_object_image_size_get(img, &w, &h);
-    int blur_size = 4;
-    int x;
-    int y;
-    int xx;
-    int yy;
+   memcpy(app->hsv_data_tmp, app->hsv_data, app->hsv_data_len);
 
-    for (y = 0; y < h; y++) {
-        for (x = 0; x < w; x++) {
-            int avg_color[3] = {0, 0, 0};
-            int blur_pixel_cnt = 0;
+   for (int i = 0; i < app->hsv_data_len / 3; i++)
+   {
+      int sat = app->hsv_data_tmp[i].s + value;
+      if (sat > 255)
+         sat = 255;
+      else if (sat < 0)
+         sat = 0;
+      app->hsv_data_tmp[i].s = sat; 
+   }
 
-            for (xx = x; (xx < x + blur_size) && (xx < w); xx++) {
-                for (yy = y; (yy < y + blur_size) && (yy < h); yy++) {
-                    int idx = (yy * w * 4) + (xx * 4);
-                    avg_color[0] += img_src[idx + 0];
-                    avg_color[1] += img_src[idx + 1];
-                    avg_color[2] += img_src[idx + 2];
-                    ++blur_pixel_cnt;
-                }
-            }
-            avg_color[0] /= blur_pixel_cnt;
-            avg_color[1] /= blur_pixel_cnt;
-            avg_color[2] /= blur_pixel_cnt;
-
-            for (xx = x; (xx < x + blur_size) && (xx < w); xx++) {
-                for (yy = y; (yy < y + blur_size) && (yy < h); yy++) {
-                    int idx = (yy * w * 4) + (xx * 4);
-                    img_src[idx + 0] = avg_color[0];
-                    img_src[idx + 1] = avg_color[1];
-                    img_src[idx + 2] = avg_color[2];
-                }
-            }
-        }
-    }
-    evas_object_image_data_update_add(img, 0, 0, w, h);
+   efl_color_buffer_convert(app->hsv_data_tmp, app->img_src, app->hsv_data_len, app->img_src_len, EFL_COLORSPACE_HSV24, EFL_COLORSPACE_RGBA32);
+   evas_object_image_data_update_add(img, 0, 0, app->img_w, app->img_h);
 }
 
-static void _btn_clicked(void *data, Eo *obj, void *eventInfo){
-   if (obj == app->btn[BUTTON_BLUR]){
-     image_blur(app->img);
-   }  else if (obj == app->btn[BUTTON_INC_SATURATION]){
-     
-   }else if (obj == app->btn[BUTTON_DEC_SATURATION]){
-     
-   } 
+static void _btn_clicked(void *data, Eo *obj, void *eventInfo)
+{
+   static int value = 0;
+   if (obj == app->btn[BUTTON_INC_SATURATION])
+   {
+      value+=25;
+   }
+   else if (obj == app->btn[BUTTON_DEC_SATURATION])
+   {
+      value-=25;
+   }
+   saturation_add(app->img, value);
 }
 
 EAPI_MAIN int
@@ -96,9 +86,8 @@ elm_main(int argc, char **argv)
    app->box = elm_box_add(app->win);
    app->boxHor = elm_box_add(app->box);
    app->boxHor2 = elm_box_add(app->box);
-   app->img =  evas_object_image_filled_add(app->box);
-    evas_object_image_file_set(app->img, "1.jpeg", NULL);
-
+   app->img = evas_object_image_filled_add(app->box);
+   evas_object_image_file_set(app->img, "1.jpeg", NULL);
 
    elm_box_horizontal_set(app->boxHor, EINA_TRUE);
    elm_box_horizontal_set(app->boxHor2, EINA_TRUE);
@@ -118,9 +107,10 @@ elm_main(int argc, char **argv)
    elm_win_resize_object_add(app->win, app->box);
    evas_object_resize(app->win, 320, 480);
 
-   for(int i = 0 ; i < BUTTON_ALL ; i++){
+   for (int i = 0; i < BUTTON_ALL; i++)
+   {
       app->btn[i] = elm_button_add(app->boxHor);
-      evas_object_smart_callback_add(app->btn[i], "clicked", _btn_clicked, NULL);\
+      evas_object_smart_callback_add(app->btn[i], "clicked", _btn_clicked, NULL);
       elm_object_text_set(app->btn[i], BUTTON_STR[i]);
       elm_box_pack_end(app->boxHor, app->btn[i]);
       evas_object_show(app->btn[i]);
@@ -130,7 +120,7 @@ elm_main(int argc, char **argv)
    evas_object_size_hint_align_set(app->img, EVAS_HINT_FILL, EVAS_HINT_FILL);
 
    evas_object_show(app->win);
-   
+
    elm_run();
 
    return 0;
