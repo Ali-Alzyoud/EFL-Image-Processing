@@ -5,12 +5,18 @@ enum BUTTON
 {
    BUTTON_INC_SATURATION = 0,
    BUTTON_DEC_SATURATION = 1,
-   BUTTON_ALL = BUTTON_DEC_SATURATION + 1,
+   BUTTON_INC_VALUE = 2,
+   BUTTON_DEC_VALUE = 3,
+   BUTTON_RESET = 4,
+   BUTTON_ALL = BUTTON_RESET + 1,
 };
 
 char *BUTTON_STR[BUTTON_ALL] = {
     "INC SATURATION",
     "DEC SATURATION",
+    "INC VALUE",
+    "DEC VALUE",
+    "RESET",
 };
 
 typedef struct _APP
@@ -27,7 +33,7 @@ typedef struct _APP
 } APP;
 APP *app;
 
-void saturation_add(Evas_Object *img, int value)
+void hsv_update(Evas_Object *img, int sat, int value)
 {
    if (!app->img_src)
    {
@@ -45,14 +51,22 @@ void saturation_add(Evas_Object *img, int value)
 
    memcpy(app->hsv_data_tmp, app->hsv_data, app->hsv_data_len);
 
+   if(sat != 0 || value != 0)
    for (int i = 0; i < app->hsv_data_len / 3; i++)
    {
-      int sat = app->hsv_data_tmp[i].s + value;
-      if (sat > 255)
-         sat = 255;
-      else if (sat < 0)
-         sat = 0;
-      app->hsv_data_tmp[i].s = sat; 
+      int new_s = app->hsv_data_tmp[i].s + sat;
+      if (new_s > 255)
+         new_s = 255;
+      else if (new_s < 0)
+         new_s = 0;
+      app->hsv_data_tmp[i].s = new_s; 
+
+      int new_v = app->hsv_data_tmp[i].v + value;
+      if (new_v > 255)
+         new_v = 255;
+      else if (new_v < 0)
+         new_v = 0;
+      app->hsv_data_tmp[i].v = new_v; 
    }
 
    efl_color_buffer_convert(app->hsv_data_tmp, app->img_src, app->hsv_data_len, app->img_src_len, EFL_COLORSPACE_HSV24, EFL_COLORSPACE_RGBA32);
@@ -61,16 +75,29 @@ void saturation_add(Evas_Object *img, int value)
 
 static void _btn_clicked(void *data, Eo *obj, void *eventInfo)
 {
-   static int value = 0;
+   static int sat = 0,value = 0;
    if (obj == app->btn[BUTTON_INC_SATURATION])
    {
-      value+=25;
+      sat+=25;
    }
    else if (obj == app->btn[BUTTON_DEC_SATURATION])
    {
+      sat-=25;
+   }
+   else if (obj == app->btn[BUTTON_INC_VALUE])
+   {
+      value+=25;
+   }
+   else if (obj == app->btn[BUTTON_DEC_VALUE])
+   {
       value-=25;
    }
-   saturation_add(app->img, value);
+   else if (obj == app->btn[BUTTON_RESET])
+   {
+      value = 0;
+      sat = 0;
+   }
+   hsv_update(app->img, sat, value);
 }
 
 EAPI_MAIN int
