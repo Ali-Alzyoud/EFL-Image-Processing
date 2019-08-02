@@ -1,56 +1,29 @@
 #include <Elementary.h>
 
 enum BUTTON{
-   BUTTON_COPY              = 0,
-   BUTTON_PASTE             = 1,
-   BUTTON_SELECT_ALL        = 2,
-   BUTTON_CUT               = 3,
-   BUTTON_SET               = 4,
-   BUTTON_GET               = 5,
-   BUTTON_ONLY_NUMBERS_9    = 6,
-   BUTTON_PASSWORD          = 7,
-
-   BUTTON_ALL               = BUTTON_PASSWORD+1,
+   BUTTON_BLUR             = 0,
+   BUTTON_INC_SATURATION   = 1,
+   BUTTON_DEC_SATURATION   = 2,
+   BUTTON_ALL              = BUTTON_DEC_SATURATION+1,
 };
 
 char* BUTTON_STR[BUTTON_ALL] ={
-   "COPY",
-   "PASTE",
-   "SELECT_ALL",
-   "CUT",
-   "SET",
-   "GET",
-   "ONLY_NUMBERS_9",
-   "PASSWORD",
+   "BLURE",
+   "INC SATURATION",
+   "DEC SATURATION",
 };
 
-enum BUTTON_STATE{
-   BUTTON_STATE_MODE              = 0,
-   BUTTON_STATE_AUTO_CAPITAL      = 1, 
-   BUTTON_STATE_SCROLL            = 2,
-   BUTTON_STATE_EDITABLE          = 3,
-   BUTTON_STATE_SINGLE_LINE       = 4,
-   BUTTON_STATE_WARP              = 5,
-   BUTTON_STATE_ICON_VISIBLE      = 6,
-   BUTTON_STATE_ALL               = BUTTON_STATE_ICON_VISIBLE + 1,
+enum COLORSPACE{
+   COLORSPACE_RGBA            = 0,
+   COLORSPACE_HSV             = 1,
 };
 
 
-char* BUTTON_STATE_STR[BUTTON_STATE_ALL] ={
-   "MODE",
-   "AUTO_CAPITAL",
-   "SCROLL",
-   "EDITABLE",
-   "SINGLE_LINE",
-   "WARP",
-   "ICON_VISIBLE",
-};
 
 typedef struct _APP
 {
    Evas_Object *win, *box, *img, *boxHor, *boxHor2;
    Eo *btn[BUTTON_ALL];
-   Eo *btnState[BUTTON_STATE_ALL];
    char * str;
 } APP;
 APP *app;
@@ -100,49 +73,14 @@ image_blur(Evas_Object *img)
     evas_object_image_data_update_add(img, 0, 0, w, h);
 }
 
-
-
-
 static void _btn_clicked(void *data, Eo *obj, void *eventInfo){
-   if (obj == app->btn[BUTTON_GET]){
+   if (obj == app->btn[BUTTON_BLUR]){
      image_blur(app->img);
-   }  else if (obj == app->btn[BUTTON_SET]){
+   }  else if (obj == app->btn[BUTTON_INC_SATURATION]){
      
-   }else if (obj == app->btn[BUTTON_COPY]){
-     
-   } else if (obj == app->btn[BUTTON_SELECT_ALL]){
-     
-   } else if (obj == app->btn[BUTTON_PASTE]){
-     
-   } else if (obj == app->btn[BUTTON_PASSWORD]){
-     
-   } else if (obj == app->btn[BUTTON_CUT]){
-     
-   } else if (obj == app->btn[BUTTON_ONLY_NUMBERS_9]){
+   }else if (obj == app->btn[BUTTON_DEC_SATURATION]){
      
    } 
-}
-
-static void _btn_state_clicked(void *data, Eo *obj, void *eventInfo)
-{
-   if (obj == app->btnState[BUTTON_STATE_MODE])
-   {
-     
-   } else if (obj == app->btnState[BUTTON_STATE_AUTO_CAPITAL]){
-     
-   } else if (obj == app->btnState[BUTTON_STATE_SCROLL]){
-     
-   } else if (obj == app->btnState[BUTTON_STATE_EDITABLE]){
-     
-   } else if (obj == app->btnState[BUTTON_STATE_SINGLE_LINE]){
-     
-      
-   } else if (obj == app->btnState[BUTTON_STATE_WARP]){
-     
-   }
-   else if (obj == app->btnState[BUTTON_STATE_WARP]){
-     
-   }
 }
 
 EAPI_MAIN int
@@ -159,7 +97,7 @@ elm_main(int argc, char **argv)
    app->boxHor = elm_box_add(app->box);
    app->boxHor2 = elm_box_add(app->box);
    app->img =  evas_object_image_filled_add(app->box);
-    evas_object_image_file_set(app->img, "4.png", NULL);
+    evas_object_image_file_set(app->img, "1.jpeg", NULL);
 
 
    elm_box_horizontal_set(app->boxHor, EINA_TRUE);
@@ -187,15 +125,6 @@ elm_main(int argc, char **argv)
       elm_box_pack_end(app->boxHor, app->btn[i]);
       evas_object_show(app->btn[i]);
    }
-
-   for(int i = 0 ; i < BUTTON_STATE_ALL ; i++){
-      app->btnState[i] = elm_button_add(app->boxHor2);
-      evas_object_smart_callback_add(app->btnState[i], "clicked", _btn_state_clicked, NULL);
-      elm_object_text_set(app->btnState[i], BUTTON_STATE_STR[i]);
-      elm_box_pack_end(app->boxHor2, app->btnState[i]);
-      evas_object_show(app->btnState[i]);
-   }
-   
 
    evas_object_size_hint_weight_set(app->img, EVAS_HINT_EXPAND, 0.1);
    evas_object_size_hint_align_set(app->img, EVAS_HINT_FILL, EVAS_HINT_FILL);
